@@ -6,7 +6,7 @@
   "appex.gui.element.experience.tooltip": "%s / %s",
   "gui.appex.experience_converter": "Преобразователь опыта",
 
-  "item.appex.experience_cell_housing": "МЭ корпус ячейки опыта",
+  "item.appex.experience_cell_housing": "МЭ корпус для ячейки опыта",
 
   "item.appex.experience_storage_cell_1k": "1К МЭ ячейка хранения опыта",
   "item.appex.experience_storage_cell_4k": "4К МЭ ячейка хранения опыта",
