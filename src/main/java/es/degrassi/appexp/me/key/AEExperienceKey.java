@@ -2,7 +2,9 @@ package es.degrassi.appexp.me.key;
 
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
+import appeng.api.storage.AEKeyFilter;
 import es.degrassi.appexp.AppliedExperienced;
+import es.degrassi.appexp.definition.AExpText;
 import es.degrassi.experiencelib.api.xei.ExperienceKey;
 import es.degrassi.experiencelib.api.xei.ExperienceStack;
 import lombok.Getter;
@@ -25,6 +27,10 @@ public class AEExperienceKey extends AEKey {
   private static final ResourceLocation ID = AppliedExperienced.id("experience");
   private static final ExperienceKey PK = ExperienceStack.EMPTY.getKey();
 
+  public static boolean is(AEKey what) {
+    return what instanceof AEExperienceKey;
+  }
+
   private AEExperienceKey() {}
 
   @Override
@@ -34,7 +40,11 @@ public class AEExperienceKey extends AEKey {
 
   @Override
   public AEKey dropSecondary() {
-    return this;
+    return KEY;
+  }
+
+  public static AEKeyFilter filter() {
+    return AEExperienceKey::is;
   }
 
   @Override
@@ -58,7 +68,7 @@ public class AEExperienceKey extends AEKey {
 
   @Override
   protected Component computeDisplayName() {
-    return Component.translatable("text.appex.experience");
+    return AExpText.EXPERIENCE.text();
   }
 
   @Override

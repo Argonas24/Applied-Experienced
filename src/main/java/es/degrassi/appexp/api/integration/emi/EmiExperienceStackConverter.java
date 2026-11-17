@@ -6,7 +6,6 @@ import dev.emi.emi.api.stack.EmiStack;
 import es.degrassi.appexp.me.key.AEExperienceKey;
 import es.degrassi.experiencelib.api.xei.ExperienceKey;
 import es.degrassi.experiencelib.api.xei.IExperienceLibAccess;
-import es.degrassi.experiencelib.api.xei.emi.ExperienceEmiStack;
 import org.jetbrains.annotations.Nullable;
 
 import static es.degrassi.appexp.me.key.AEExperienceKey.KEY;

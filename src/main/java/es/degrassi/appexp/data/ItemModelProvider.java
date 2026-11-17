@@ -1,12 +1,15 @@
 package es.degrassi.appexp.data;
 
 import appeng.core.AppEng;
+import appeng.core.definitions.AEParts;
 import appeng.core.definitions.ItemDefinition;
 import appeng.items.storage.StorageTier;
-import es.degrassi.appexp.definition.AExpItems;
 import es.degrassi.appexp.AppliedExperienced;
+import es.degrassi.appexp.definition.AExpItems;
+import es.degrassi.appexp.definition.AExpParts;
 import net.minecraft.core.Direction;
 import net.minecraft.data.PackOutput;
+import net.neoforged.neoforge.client.model.generators.ItemModelBuilder;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 public class ItemModelProvider extends net.neoforged.neoforge.client.model.generators.ItemModelProvider {
@@ -15,11 +18,11 @@ public class ItemModelProvider extends net.neoforged.neoforge.client.model.gener
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   protected void registerModels() {
     var housing = AExpItems.EXPERIENCE_CELL_HOUSING;
 
-    withExistingParent(housing.id().getPath(), mcLoc("item/generated"))
-        .texture("layer0", AppliedExperienced.id("item/" + housing.id().getPath()));
+    basicItem(housing.asItem()).texture("layer0", AppliedExperienced.id("item/" + housing.id().getPath()));
 
     AExpItems.getCells().forEach(cell -> {
       cell(cell, "item/" + cell.id().getPath());
@@ -37,6 +40,14 @@ public class ItemModelProvider extends net.neoforged.neoforge.client.model.gener
         .texture("front", "block/experience_acceptor");
     withExistingParent("item/cable_experience_acceptor", AppEng.makeId("item/cable_energy_acceptor"))
         .texture("front", "block/experience_acceptor");
+    ((AppexModelBuilder<ItemModelBuilder>) withExistingParent(
+        AExpParts.EXPERIENCE_ACCESS_TERMINAL.id().withPrefix("item/").getPath(),
+        AppEng.makeId("item/display_base")
+    )).uncheckedTexture("front", AEParts.CRAFTING_TERMINAL.id().withPrefix("part/"))
+      .texture("front_bright", AExpParts.EXPERIENCE_ACCESS_TERMINAL.id().withPrefix("part/").withSuffix("_bright"))
+      .texture("front_medium", AExpParts.EXPERIENCE_ACCESS_TERMINAL.id().withPrefix("part/").withSuffix("_medium"))
+      .texture("front_dark", AExpParts.EXPERIENCE_ACCESS_TERMINAL.id().withPrefix("part/").withSuffix("_dark"));
+    basicItem(AExpItems.EXPERIENCE_TERMINAL.asItem()).texture("layer0", "item/wireless_experience_access_terminal");
   }
 
   private int offsetByTier(StorageTier tier) {

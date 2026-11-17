@@ -6,9 +6,14 @@ import appeng.init.client.InitScreens;
 import appeng.menu.implementations.MenuTypeBuilder;
 import appeng.menu.me.common.MEStorageMenu;
 import es.degrassi.appexp.AppliedExperienced;
+import es.degrassi.appexp.api.storage.IExperienceAccessTermMenuHost;
 import es.degrassi.appexp.block.entity.ExperienceConverterEntity;
+import es.degrassi.appexp.client.container.ExperienceAccessTermMenu;
 import es.degrassi.appexp.client.container.ExperienceConverterContainer;
+import es.degrassi.appexp.client.screen.ExperienceAccessTermScreen;
 import es.degrassi.appexp.client.screen.ExperienceConverterScreen;
+import es.degrassi.appexp.weat.WeatMenu;
+import es.degrassi.appexp.weat.WeatScreen;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -25,6 +30,10 @@ public final class AExpMenus {
       .create(ExperienceConverterContainer::new, ExperienceConverterEntity.class)
       .build(AppliedExperienced.id("experience_converter"));
 
+  public static final MenuType<ExperienceAccessTermMenu> EXPERIENCE_ACCESS_TERM_MENU = MenuTypeBuilder
+      .create(ExperienceAccessTermMenu::new, IExperienceAccessTermMenuHost.class)
+      .build(AppliedExperienced.id("experienceaccessterminal"));
+
   @SuppressWarnings("RedundantTypeArguments")
   public static void initialize(IEventBus bus) {
     bus.addListener((RegisterMenuScreensEvent event) -> {
@@ -40,6 +49,13 @@ public final class AExpMenus {
           ExperienceConverterScreen::new,
           "/screens/experience_converter.json"
       );
+      InitScreens.<ExperienceAccessTermMenu, ExperienceAccessTermScreen<ExperienceAccessTermMenu>>register(
+          event,
+          EXPERIENCE_ACCESS_TERM_MENU,
+          ExperienceAccessTermScreen::new,
+          "/screens/terminals/experience_access_terminal.json"
+      );
+      InitScreens.register(event, WeatMenu.TYPE, WeatScreen::new, "/screens/wtlib/wireless_experience_access_terminal.json");
     });
   }
 }

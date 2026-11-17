@@ -2,11 +2,17 @@ package es.degrassi.appexp.data;
 
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
+import appeng.datagen.providers.tags.ConventionTags;
 import appeng.items.storage.StorageTier;
 import appeng.recipes.game.StorageCellDisassemblyRecipe;
+import de.mari_023.ae2wtlib.wut.WTDefinitions;
 import es.degrassi.appexp.AppliedExperienced;
+import es.degrassi.appexp.data.ae2wtlib.CombineBuilder;
+import es.degrassi.appexp.data.ae2wtlib.UpgradeBuilder;
 import es.degrassi.appexp.definition.AExpBlocks;
 import es.degrassi.appexp.definition.AExpItems;
+import es.degrassi.appexp.definition.AExpParts;
+import es.degrassi.appexp.weat.WeatDefinitions;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
@@ -19,6 +25,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.common.Tags;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -30,8 +37,8 @@ public class RecipeProvider extends net.minecraft.data.recipes.RecipeProvider {
   }
 
   @Override
-  protected void buildRecipes(RecipeOutput output) {
-    ShapedRecipeBuilder.shaped(RecipeCategory.MISC, AExpItems.EXPERIENCE_CELL_HOUSING::get)
+  protected void buildRecipes(@NotNull RecipeOutput output) {
+    ShapedRecipeBuilder.shaped(RecipeCategory.MISC, AExpItems.EXPERIENCE_CELL_HOUSING)
         .pattern("QRQ")
         .pattern("R R")
         .pattern("OOO")
@@ -112,15 +119,49 @@ public class RecipeProvider extends net.minecraft.data.recipes.RecipeProvider {
         .unlockedBy("has_experience_bottle", has(Items.EXPERIENCE_BOTTLE))
         .save(output, AppliedExperienced.id("experience_acceptor_2"));
 
-
-    ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, AExpItems.EXPERIENCE_ACCEPTOR_PART)
+    ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, AExpParts.EXPERIENCE_ACCEPTOR)
         .requires(AExpBlocks.EXPERIENCE_ACCEPTOR)
         .unlockedBy("has_experience_acceptor", has(AExpBlocks.EXPERIENCE_ACCEPTOR))
         .save(output, AppliedExperienced.id("cable_experience_acceptor"));
     ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, AExpBlocks.EXPERIENCE_ACCEPTOR)
-        .requires(AExpItems.EXPERIENCE_ACCEPTOR_PART)
+        .requires(AExpParts.EXPERIENCE_ACCEPTOR)
         .unlockedBy("has_experience_acceptor", has(AExpBlocks.EXPERIENCE_ACCEPTOR))
         .save(output, AppliedExperienced.id("experience_acceptor_from_part"));
+
+    ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, AExpParts.EXPERIENCE_ACCESS_TERMINAL)
+        .requires(ConventionTags.ILLUMINATED_PANEL)
+        .requires(AEItems.ENGINEERING_PROCESSOR)
+        .requires(Items.EXPERIENCE_BOTTLE)
+        .unlockedBy("has_experience_bottle", has(Items.EXPERIENCE_BOTTLE))
+        .save(output, AppliedExperienced.id("network/parts/terminals_experience_access"));
+
+    ShapedRecipeBuilder.shaped(RecipeCategory.MISC, AExpItems.EXPERIENCE_TERMINAL)
+        .pattern("a")
+        .pattern("b")
+        .pattern("c")
+        .define('a', AEItems.WIRELESS_RECEIVER)
+        .define('b', AExpParts.EXPERIENCE_ACCESS_TERMINAL)
+        .define('c', AEBlocks.DENSE_ENERGY_CELL.asItem())
+        .unlockedBy("has_wt", has(AEItems.WIRELESS_TERMINAL))
+        .unlockedBy("has_expt", has(AExpParts.EXPERIENCE_ACCESS_TERMINAL))
+        .save(output);
+
+    List.of(
+        WTDefinitions.PATTERN_ACCESS,
+        WTDefinitions.CRAFTING,
+        WTDefinitions.PATTERN_ENCODING
+    ).forEach(wt -> CombineBuilder.of(wt, WeatDefinitions.EXPERIENCE)
+        .unlockedBy("has_" + wt.terminalName(), has(wt.item()))
+        .unlockedBy("has_xp_terminal", has(AExpItems.EXPERIENCE_TERMINAL))
+        .save(
+            output,
+            AppliedExperienced.id(wt.terminalName().replace("pattern_", "").charAt(0) + "exp")
+              .withPrefix("wireless_universal_terminal/")
+        )
+    );
+    UpgradeBuilder.of(WeatDefinitions.EXPERIENCE)
+        .unlockedBy("has_weat", has(AExpItems.EXPERIENCE_TERMINAL))
+        .save(output, AppliedExperienced.id("upgrade_experience_access").withPrefix("wireless_universal_terminal/"));
   }
 
   private static Item cellComponent(StorageTier tier) {

@@ -4,8 +4,10 @@ import appeng.api.behaviors.ContainerItemStrategy;
 import appeng.api.config.Actionable;
 import appeng.api.stacks.GenericStack;
 import com.google.common.base.Preconditions;
+import es.degrassi.appexp.definition.AExpComponents;
 import es.degrassi.appexp.me.key.AEExperienceKey;
 import es.degrassi.experiencelib.api.capability.ExperienceLibCapabilities;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
@@ -27,16 +29,11 @@ public class ExperienceContainerItemStrategy implements ContainerItemStrategy<AE
     return stack.getCapability(ExperienceLibCapabilities.EXPERIENCE.item()) != null;
   }
 
-  private boolean isCreative(ItemStack stack) {
-    return isExperienced(stack) && getExperience(stack) >= Integer.MAX_VALUE;
-  }
-
   private void changeExperience(long amount, ItemStack stack) {
     Preconditions.checkArgument(isExperienced(stack), "Stack must have Experience capability");
-    if (isCreative(stack)) return;
-    stack.getCapability(ExperienceLibCapabilities.EXPERIENCE.item()).setExperience(0,
-        Math.min(AEExperienceKey.MAX_EXPERIENCE,
-        Math.max(getExperience(stack) + amount, 0)));
+    stack.getCapability(ExperienceLibCapabilities.EXPERIENCE.item())
+        .setExperience(0, Math.clamp(getExperience(stack) + amount, 0, AEExperienceKey.MAX_EXPERIENCE));
+    stack.set(AExpComponents.EXPERIENCE_AMOUNT, Math.clamp(getExperience(stack) + amount, 0, AEExperienceKey.MAX_EXPERIENCE));
   }
 
   @Override
@@ -44,13 +41,10 @@ public class ExperienceContainerItemStrategy implements ContainerItemStrategy<AE
     if (stack.isEmpty()) {
       return null;
     }
-
     var handler = stack.getCapability(ExperienceLibCapabilities.EXPERIENCE.item());
-
     if (handler != null) {
       return new GenericStack(AEExperienceKey.KEY, handler.getExperience());
     }
-
     return null;
   }
 
@@ -111,10 +105,12 @@ public class ExperienceContainerItemStrategy implements ContainerItemStrategy<AE
 
   @Override
   public void playFillSound(Player player, AEExperienceKey what) {
+    player.playSound(SoundEvents.BOTTLE_FILL);
   }
 
   @Override
   public void playEmptySound(Player player, AEExperienceKey what) {
+    player.playSound(SoundEvents.BOTTLE_EMPTY);
   }
 
   @Override
@@ -122,8 +118,10 @@ public class ExperienceContainerItemStrategy implements ContainerItemStrategy<AE
     return getContainedStack(context.getStack());
   }
 
-  public interface Context {
+  interface Context {
     ItemStack getStack();
+
+    void setStack(ItemStack stack);
 
     void addOverflow(ItemStack stack);
   }
@@ -135,6 +133,10 @@ public class ExperienceContainerItemStrategy implements ContainerItemStrategy<AE
     }
 
     @Override
+    public void setStack(ItemStack stack) {
+      menu.setCarried(stack);
+    }
+
     public void addOverflow(ItemStack stack) {
       if (menu.getCarried().isEmpty()) {
         menu.setCarried(stack);
@@ -151,6 +153,10 @@ public class ExperienceContainerItemStrategy implements ContainerItemStrategy<AE
     }
 
     @Override
+    public void setStack(ItemStack stack) {
+      player.getInventory().setItem(slot, stack);
+    }
+
     public void addOverflow(ItemStack stack) {
       player.getInventory().placeItemBackInInventory(stack);
     }

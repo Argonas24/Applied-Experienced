@@ -1,0 +1,11 @@
+{
+  "type": "ae2wtlib:combine",
+  "terminalA": {
+    "item": "ae2:wireless_crafting_terminal"
+  },
+  "terminalAName": "crafting",
+  "terminalB": {
+    "item": "appex:wireless_experience_access_terminal"
+  },
+  "terminalBName": "experience_access"
+}

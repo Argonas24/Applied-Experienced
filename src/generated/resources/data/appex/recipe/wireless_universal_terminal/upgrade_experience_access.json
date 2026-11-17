@@ -1,0 +1,7 @@
+{
+  "type": "ae2wtlib:upgrade",
+  "terminal": {
+    "item": "appex:wireless_experience_access_terminal"
+  },
+  "terminalName": "experience_access"
+}

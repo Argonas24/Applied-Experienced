@@ -22,7 +22,7 @@ public class ExperienceKeyType extends AEKeyType {
   }
 
   private ExperienceKeyType() {
-    super(AppliedExperienced.id("experience"), AEExperienceKey.class, AExpText.EXPERIENCE.formatted());
+    super(AppliedExperienced.id("experience"), AEExperienceKey.class, AExpText.EXPERIENCE.text());
   }
 
   public MapCodec<? extends AEKey> codec() {

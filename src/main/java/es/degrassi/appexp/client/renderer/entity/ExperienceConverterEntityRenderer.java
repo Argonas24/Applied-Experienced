@@ -29,7 +29,7 @@ public class ExperienceConverterEntityRenderer implements BlockEntityRenderer<Ex
     var fill = Mth.lerp(Mth.clamp(amount, 0, 1), 2 / 16F, 12 / 16F);
 
     var builder = new CubeBuilder();
-    float y2 = Math.min(fill * 16, Math.max(fill * 16 - 1/2048f, 0));
+    float y2 = Math.clamp(fill * 16 - 1 / 2048f, 0, fill * 16);
     builder.setTexture(EXPERIENCE.sprite());
     builder.addCube(1 + 1/2048f,  1/2048f, 1 + 1/2048f, 15 - 1/2048f, y2, 15 - 1/2048f);
 

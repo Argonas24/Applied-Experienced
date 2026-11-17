@@ -2,6 +2,7 @@ package es.degrassi.appexp.client;
 
 import appeng.api.client.AEKeyRendering;
 import appeng.api.client.StorageCellModels;
+import appeng.api.util.AEColor;
 import appeng.items.storage.BasicStorageCell;
 import appeng.items.tools.powered.PortableCellItem;
 import es.degrassi.appexp.AppliedExperienced;
@@ -10,6 +11,7 @@ import es.degrassi.appexp.client.renderer.item.ExperienceConverterItemRenderer;
 import es.degrassi.appexp.definition.AExpBlockEntities;
 import es.degrassi.appexp.definition.AExpBlocks;
 import es.degrassi.appexp.definition.AExpItems;
+import es.degrassi.appexp.definition.AExpParts;
 import es.degrassi.appexp.me.key.AEExperienceKey;
 import es.degrassi.appexp.me.key.ExperienceKeyType;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
@@ -38,15 +40,13 @@ public class AppliedExperiencedClient {
 
   private void registerItemColors(RegisterColorHandlersEvent.Item event) {
     for (var cell : AExpItems.getCells()) {
-      event.register(
-          (stack, tintIndex) -> FastColor.ARGB32.opaque(BasicStorageCell.getColor(stack, tintIndex)), cell);
+      event.register((stack, tintIndex) -> FastColor.ARGB32.opaque(BasicStorageCell.getColor(stack, tintIndex)), cell);
     }
 
     for (var portable : AExpItems.getPortables()) {
-      event.register(
-          (stack, tintIndex) -> FastColor.ARGB32.opaque(PortableCellItem.getColor(stack, tintIndex)),
-          portable);
+      event.register((stack, tintIndex) -> FastColor.ARGB32.opaque(PortableCellItem.getColor(stack, tintIndex)), portable);
     }
+    event.register((stack, tintIndex) -> FastColor.ARGB32.opaque(AEColor.TRANSPARENT.getVariantByTintIndex(tintIndex)), AExpParts.EXPERIENCE_ACCESS_TERMINAL);
   }
 
   private void initializeModels(FMLClientSetupEvent event) {

@@ -1,0 +1,9 @@
+{
+  "parent": "ae2:item/display_base",
+  "textures": {
+    "front": "ae2:part/crafting_terminal",
+    "front_bright": "appex:part/experience_access_terminal_bright",
+    "front_dark": "appex:part/experience_access_terminal_dark",
+    "front_medium": "appex:part/experience_access_terminal_medium"
+  }
+}

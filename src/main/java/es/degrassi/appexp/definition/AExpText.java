@@ -1,21 +1,35 @@
 package es.degrassi.appexp.definition;
 
+import appeng.core.localization.LocalizationEnum;
 import es.degrassi.appexp.AppliedExperienced;
-import net.minecraft.network.chat.Component;
+import lombok.Getter;
 
-public enum AExpText {
-  EXPERIENCE("experience"),
-  CREATIVE_TAB("creative_tab"),
-  EXPERIENCE_BUTTON_INSERT("experience_button.insert"),
-  EXPERIENCE_BUTTON_EXTRACT("experience_button.extract");
+public enum AExpText implements LocalizationEnum {
+  EXPERIENCE("experience", "Experience"),
+  CONVERTER_TOOLTIP("item.converter.tooltip", "Stored: %s XP"),
+  CONVERTER_INV("item.converter.inv", "Stored %s"),
+  CONVERTER_TITLE("gui.title.experience_converter", "Experience Tank"),
+  EXPERIENCE_WIDGET("gui.element.experience", "%s / %s"),
+  CREATIVE_TAB("creative_tab", "Applied Experienced"),
+  EXPERIENCE_BUTTON_INSERT("gui.element.experience_button.insert", "Insert: %s %s"),
+  EXPERIENCE_BUTTON_EXTRACT("gui.element.experience_button.extract", "Extract: %s %s"),
+  EXPERIENCE_INVERT_BUTTON_TRUE("gui.element.experience_invert_button.inverted", "Click to extract xp from Experience Bottles"),
+  EXPERIENCE_INVERT_BUTTON_FALSE("gui.element.experience_invert_button.to_invert", "Click to insert xp to Glass Bottles"),
+  P2PAttunementExperience("p2p_attunement.experrience", "Portable Experience Storage (i.e. XP Bottle, Glass Bottle, XP Tanks)"),
+  ExperienceAccessTerminalShort("gui.title.xpAccessTerminalShort", "Experience A. Terminal")
+  ;
 
   public final String key;
+  @Getter
+  private final String englishText;
 
-  AExpText(String key) {
+  AExpText(String key, String englishText) {
     this.key = "text.%s.%s".formatted(AppliedExperienced.MODID, key);
+    this.englishText = englishText;
   }
 
-  public Component formatted(Object...params) {
-    return Component.translatable(key, params);
+  @Override
+  public String getTranslationKey() {
+    return key;
   }
 }

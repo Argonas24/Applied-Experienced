@@ -11,7 +11,8 @@ import appeng.menu.locator.MenuHostLocator;
 import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.CombinedInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
-import es.degrassi.appexp.block.ExperienceConverterBlock;
+import com.google.common.primitives.Ints;
+import es.degrassi.appexp.api.entity.IExperienceInvHost;
 import es.degrassi.appexp.definition.AExpBlockEntities;
 import es.degrassi.appexp.definition.AExpBlocks;
 import es.degrassi.appexp.definition.AExpComponents;
@@ -41,34 +42,23 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
-public class ExperienceConverterEntity extends BlockEntity implements ServerTickingBlockEntity, IActionHost, InternalInventoryHost {
+public class ExperienceConverterEntity extends BlockEntity implements ServerTickingBlockEntity, IActionHost, InternalInventoryHost, IExperienceInvHost {
+  private static final String XP_TANK = "xt";
+  private static final String INVENTORY = "i";
   @Getter
-  private final BasicExperienceHandler experienceTank = new BasicExperienceHandler(
-      1,
-      AExpConfig.get().XP_CONVERTER_CAPACITY.get(),
-      () -> {
-        CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, level.registryAccess());
-        BlockState state = getBlockState().setValue(ExperienceConverterBlock.light,
-            Mth.lerpInt(Mth.clamp(((float) getExperience()) / getExperienceCapacity(), 0, 1), 0, 15));
-        level.setBlockAndUpdate(getBlockPos(), state);
-        if (level.getBlockEntity(getBlockPos()) instanceof ExperienceConverterEntity entity) {
-          entity.loadAdditional(tag, level.registryAccess());
-          entity.setChanged();
-          return;
-        }
-        setChanged();
-      }
-  );
+  private boolean isInverted = false;
+
+  @Getter
+  private final BasicExperienceHandler experienceTank = new BasicExperienceHandler(1, AExpConfig.get().XP_CONVERTER_CAPACITY.get(), this::setChanged);
 
   private final AppEngInternalInventory inventoryIn;
   private final AppEngInternalInventory inventoryOut;
@@ -109,33 +99,6 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
     }
   };
 
-  public static void registerCapability(final RegisterCapabilitiesEvent event) {
-    event.registerBlockEntity(
-        ExperienceLibCapabilities.EXPERIENCE.block(),
-        AExpBlockEntities.EXPERIENCE_CONVERTER.get(),
-        (be, ctx) -> be.experienceTank
-    );
-    event.registerBlockEntity(
-        Capabilities.FluidHandler.BLOCK,
-        AExpBlockEntities.EXPERIENCE_CONVERTER.get(),
-        (be, ctx) -> be.fluidTank
-    );
-    event.registerItem(
-        ExperienceLibCapabilities.EXPERIENCE.item(),
-        (item, v) -> {
-          IExperienceHandler handler = new BasicExperienceHandler(1, Long.MAX_VALUE, null);
-          handler.setExperience(0, Optional.ofNullable(item.get(AExpComponents.EXPERIENCE_AMOUNT)).orElse(0L));
-          return handler;
-        },
-        AExpBlocks.EXPERIENCE_CONVERTER.item().get()
-    );
-    event.registerBlockEntity(
-        Capabilities.ItemHandler.BLOCK,
-        AExpBlockEntities.EXPERIENCE_CONVERTER.get(),
-        (be, ctx) -> be.internalInventory.toItemHandler()
-    );
-  }
-
   public float getFillState() {
     return this.getExperience() / (float) this.getExperienceCapacity();
   }
@@ -145,29 +108,81 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
   public ExperienceConverterEntity(BlockPos pos, BlockState blockState) {
     super(AExpBlockEntities.EXPERIENCE_CONVERTER.get(), pos, blockState);
     this.inventoryIn = new AppEngInternalInventory(this, 1);
-    this.inventoryIn.setFilter(ApexItemFilters.INSERT_ONLY);
+    this.inventoryIn.setFilter(ApexItemFilters.INSERT_ONLY_XP);
     this.inventoryOut = new AppEngInternalInventory(this, 1);
-    this.inventoryOut.setFilter(ApexItemFilters.EXTRACT_ONLY);
+    this.inventoryOut.setFilter(ApexItemFilters.EXTRACT_ONLY_GLASS);
     this.internalInventory = new CombinedInternalInventory(inventoryIn, inventoryOut);
+  }
+
+  public int getLightEmission() {
+    var fillState = getFillState();
+    if (fillState == 0) return 0;
+    return Mth.lerpInt(Mth.clamp(fillState, 0, 1), 1, 15);
+  }
+
+  public void setInverted(boolean inverted) {
+    isInverted = inverted;
+    var prevStackIn = inventoryIn.getStackInSlot(0);
+    var prevStackOut = inventoryOut.getStackInSlot(0);
+    inventoryIn.setFilter(isInverted ? ApexItemFilters.INSERT_ONLY_GLASS : ApexItemFilters.INSERT_ONLY_XP);
+    inventoryOut.setFilter(isInverted ? ApexItemFilters.EXTRACT_ONLY_XP : ApexItemFilters.EXTRACT_ONLY_GLASS);
+    inventoryIn.setItemDirect(0, prevStackOut);
+    inventoryOut.setItemDirect(0, prevStackIn);
+    setChanged();
   }
 
   @Override
   public void serverTick() {
+    if (inventoryIn.isEmpty()) return;
+    if (inventoryOut.getRedstoneSignal() == 15) return;
+    AtomicBoolean doneSomething = new AtomicBoolean(false);
     internalInventory.forEach(stack -> {
-      if (!stack.is(Items.EXPERIENCE_BOTTLE)) return;
-      int amount = stack.getCount();
-      if (amount < 1) return;
-      long received = experienceTank.receiveExperience(0, AExpConfig.get().XP_BOTTLE_XP_AMOUNT.get(), true);
-      ItemStack extracted = internalInventory.simulateSimilarRemove(1, Items.EXPERIENCE_BOTTLE.getDefaultInstance(), FuzzyMode.IGNORE_ALL, null);
-      ItemStack remaining = internalInventory.addItems(Items.GLASS_BOTTLE.getDefaultInstance(), true);
-      if (received < AExpConfig.get().XP_BOTTLE_XP_AMOUNT.get()) return;
-      if (extracted.isEmpty()) return;
-      if (!remaining.isEmpty()) return;
-      experienceTank.receiveExperience(0, AExpConfig.get().XP_BOTTLE_XP_AMOUNT.get(), false);
-      internalInventory.removeItems(1, extracted, null);
-      internalInventory.addItems(Items.GLASS_BOTTLE.getDefaultInstance(), false);
+      doneSomething.set(doneSomething.get() || (isInverted() ? insertToItem(stack) : extractFromItem(stack)));
     });
-    setChanged();
+    if (doneSomething.get()) setChanged();
+  }
+
+  private boolean extractFromItem(ItemStack stack) {
+    if (!stack.is(Items.EXPERIENCE_BOTTLE)) return false;
+    if (stack.isEmpty()) return false;
+    int amount = Math.min(AExpConfig.get().XP_CONVERTER_TICK_AMOUNT.get(), stack.getCount());
+    var cap = stack.copyWithCount(1).getCapability(ExperienceLibCapabilities.EXPERIENCE.item());
+    if (cap == null) return false;
+    long capExtract = cap.getExperienceCapacity() * amount;
+    if (capExtract == 0) return false;
+    long received = experienceTank.receiveExperienceRecipe(0, capExtract, true);
+    if (received <= 0) return false;
+    int capAmountDone = Ints.saturatedCast(received / cap.getExperienceCapacity());
+    if (capAmountDone < 1) return false;
+    ItemStack extracted = internalInventory.simulateSimilarRemove(capAmountDone, Items.EXPERIENCE_BOTTLE.getDefaultInstance(), FuzzyMode.IGNORE_ALL, null);
+    if (extracted.isEmpty()) return false;
+    ItemStack remaining = internalInventory.addItems(Items.GLASS_BOTTLE.getDefaultInstance().copyWithCount(extracted.getCount()), true);
+    if (!remaining.isEmpty()) return false;
+    internalInventory.removeItems(extracted.getCount(), extracted, null);
+    internalInventory.addItems(Items.GLASS_BOTTLE.getDefaultInstance().copyWithCount(extracted.getCount()), false);
+    experienceTank.receiveExperienceRecipe(0, received, false);
+    return true;
+  }
+
+  private boolean insertToItem(ItemStack stack) {
+    if (!stack.is(Items.GLASS_BOTTLE)) return false;
+    if (stack.isEmpty()) return false;
+    int amount = Math.min(AExpConfig.get().XP_CONVERTER_TICK_AMOUNT.get(), stack.getCount());
+    var cap = stack.copyWithCount(1).getCapability(ExperienceLibCapabilities.EXPERIENCE.item());
+    if (cap == null) return false;
+    var capAmount = cap.getExperienceCapacity();
+    long capExtract = experienceTank.extractExperienceRecipe(0, capAmount * amount, true);
+    if (capExtract <= 0) return false;
+    var extractedAmount = Ints.saturatedCast(capExtract / capAmount);
+    if (extractedAmount < 1) return false;
+    ItemStack extracted = internalInventory.simulateSimilarRemove(extractedAmount, Items.GLASS_BOTTLE.getDefaultInstance(), FuzzyMode.IGNORE_ALL, null);
+    if (extracted.isEmpty()) return false;
+    ItemStack remaining = internalInventory.addItems(Items.EXPERIENCE_BOTTLE.getDefaultInstance().copyWithCount(extracted.getCount()), true);
+    if (!remaining.isEmpty()) return false;
+    internalInventory.removeItems(extracted.getCount(), extracted, null);
+    internalInventory.addItems(Items.EXPERIENCE_BOTTLE.getDefaultInstance().copyWithCount(extracted.getCount()), false);
+    experienceTank.extractExperienceRecipe(0, capExtract, false);
+    return true;
   }
 
   @Override
@@ -180,12 +195,14 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
 
   @Override
   protected void collectImplicitComponents(DataComponentMap.Builder components) {
+    super.collectImplicitComponents(components);
     components.set(AExpComponents.EXPERIENCE_AMOUNT, getExperience());
     components.set(AExpComponents.IN_INV, inventoryIn.toItemContainerContents());
     components.set(AExpComponents.OUT_INV, inventoryOut.toItemContainerContents());
   }
 
   protected void applyImplicitComponents(BlockEntity.DataComponentInput componentInput) {
+    super.applyImplicitComponents(componentInput);
     getExperienceTank().setExperience(0, componentInput.getOrDefault(AExpComponents.EXPERIENCE_AMOUNT, 0L));
     inventoryIn.fromItemContainerContents(componentInput.getOrDefault(AExpComponents.IN_INV, ItemContainerContents.fromItems(List.of(ItemStack.EMPTY))));
     inventoryOut.fromItemContainerContents(componentInput.getOrDefault(AExpComponents.OUT_INV, ItemContainerContents.fromItems(List.of(ItemStack.EMPTY))));
@@ -202,7 +219,7 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
   @Override
   protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
     super.saveAdditional(tag, registries);
-    tag.put("experienceTank", experienceTank.serializeNBT(registries));
+    tag.put(XP_TANK, experienceTank.serializeNBT(registries));
     var inv = this.getInternalInventory();
     if (inv != InternalInventory.empty()) {
       final CompoundTag opt = new CompoundTag();
@@ -210,17 +227,17 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
         var is = inv.getStackInSlot(x);
         opt.put("item" + x, is.saveOptional(registries));
       }
-      tag.put("inv", opt);
+      tag.put(INVENTORY, opt);
     }
   }
 
   @Override
   protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
     super.loadAdditional(tag, registries);
-    experienceTank.deserializeNBT(registries, tag.getCompound("experienceTank"));
+    experienceTank.deserializeNBT(registries, tag.getCompound(XP_TANK));
     var inv = this.getInternalInventory();
     if (inv != InternalInventory.empty()) {
-      var opt = tag.getCompound("inv");
+      var opt = tag.getCompound(INVENTORY);
       for (int x = 0; x < inv.size(); x++) {
         var item = opt.getCompound("item" + x);
         inv.setItemDirect(x, ItemStack.parseOptional(registries, item));
@@ -282,7 +299,7 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
     this.setChanged();
   }
 
-  private void setChangedAtEndOfTick(@NotNull Level level) {
+  private void setChangedAtEndOfTick(Level level) {
     this.setChanged();
     this.setChangedQueued = false;
   }
@@ -291,5 +308,32 @@ public class ExperienceConverterEntity extends BlockEntity implements ServerTick
   public boolean isClientSide() {
     Level level = getLevel();
     return level == null || level.isClientSide();
+  }
+
+  public static void registerCapability(final RegisterCapabilitiesEvent event) {
+    event.registerBlockEntity(
+        ExperienceLibCapabilities.EXPERIENCE.block(),
+        AExpBlockEntities.EXPERIENCE_CONVERTER.get(),
+        (be, ctx) -> be.getExperienceTank()
+    );
+    event.registerBlockEntity(
+        Capabilities.FluidHandler.BLOCK,
+        AExpBlockEntities.EXPERIENCE_CONVERTER.get(),
+        (be, ctx) -> be.fluidTank
+    );
+    event.registerItem(
+        ExperienceLibCapabilities.EXPERIENCE.item(),
+        (item, v) -> {
+          IExperienceHandler handler = new BasicExperienceHandler(1, AExpConfig.get().XP_CONVERTER_CAPACITY.get(), null);
+          handler.setExperience(0, Optional.ofNullable(item.get(AExpComponents.EXPERIENCE_AMOUNT)).orElse(0L));
+          return handler;
+        },
+        AExpBlocks.EXPERIENCE_CONVERTER.item().get()
+    );
+    event.registerBlockEntity(
+        Capabilities.ItemHandler.BLOCK,
+        AExpBlockEntities.EXPERIENCE_CONVERTER.get(),
+        (be, ctx) -> be.internalInventory.toItemHandler()
+    );
   }
 }

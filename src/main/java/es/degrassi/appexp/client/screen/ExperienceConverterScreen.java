@@ -2,39 +2,39 @@ package es.degrassi.appexp.client.screen;
 
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.core.AELog;
-import appeng.core.AppEng;
-import appeng.menu.slot.AppEngSlot;
+import es.degrassi.appexp.client.Amount;
 import es.degrassi.appexp.client.container.ExperienceConverterContainer;
+import es.degrassi.appexp.client.widgets.ExperienceButton;
 import es.degrassi.appexp.client.widgets.ExperienceWidget;
 import es.degrassi.appexp.client.widgets.Icon;
 import es.degrassi.appexp.client.widgets.IconButton;
 import es.degrassi.appexp.definition.AExpText;
 import es.degrassi.appexp.network.client.CExperienceButtonClickedPacket;
-import lombok.Getter;
-import net.minecraft.client.gui.GuiGraphics;
+import es.degrassi.appexp.network.client.CInvertExperienceButtonClickedPacket;
+import guideme.PageAnchor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
-import guideme.PageAnchor;
-
-import java.util.Locale;
 
 public class ExperienceConverterScreen extends AEBaseScreen<ExperienceConverterContainer> {
 
   public ExperienceConverterScreen(ExperienceConverterContainer menu, Inventory playerInventory, Component title, ScreenStyle style) {
     super(menu, playerInventory, title, style);
-    widgets.add("experience", new ExperienceWidget(getXSize(), menu));
+    var invertButton = new InvertButton(btn -> PacketDistributor.sendToServer(
+        new CInvertExperienceButtonClickedPacket(menu.getEntity().getBlockPos())
+    ));
+    widgets.add("experience", new ExperienceWidget(getXSize() - invertButton.getWidth()-4, menu::getXp, menu::getCapacity, false));
     for (Amount value : Amount.values()) {
       widgets.add("extract_" + value.nameL(), new ExperienceButton(true, value, (btn) -> {
-        PacketDistributor.sendToServer(new CExperienceButtonClickedPacket(menu.entity.getBlockPos(), value, true));
+        PacketDistributor.sendToServer(new CExperienceButtonClickedPacket(menu.getEntity().getBlockPos(), value, true));
       }));
       widgets.add("insert_" + value.nameL(), new ExperienceButton(false, value, (btn) -> {
-        PacketDistributor.sendToServer(new CExperienceButtonClickedPacket(menu.entity.getBlockPos(), value, false));
+        PacketDistributor.sendToServer(new CExperienceButtonClickedPacket(menu.getEntity().getBlockPos(), value, false));
       }));
     }
+    widgets.add("invert_xp_action", invertButton);
   }
 
   protected boolean shouldAddToolbar() {
@@ -46,56 +46,23 @@ public class ExperienceConverterScreen extends AEBaseScreen<ExperienceConverterC
     return null;
   }
 
-  private static class ExperienceButton extends IconButton {
-    protected ExperienceButton(boolean extraction, Amount amount, OnPress onPress) {
+  private class InvertButton extends IconButton {
+    protected InvertButton(Button.OnPress onPress) {
       super(onPress);
-      setIcon(amount.getIcon(extraction));
-      setMessage(amount.message(extraction));
-    }
-  }
-
-  @Getter
-  public enum Amount {
-    ONE("1", 1),
-    TEN("10", 10),
-    HUNDRED("100", 100),
-    ALL("All");
-
-    private final String formatted;
-    private int amount = 0;
-
-    Amount(String formatted, int amount) {
-      this(formatted);
-      this.amount = amount;
     }
 
-    Amount(String formatted) {
-      this.formatted = formatted;
+    private boolean inverted() {
+      return ExperienceConverterScreen.this.getMenu().inverted;
     }
 
-    public String nameL() {
-      return name().toLowerCase(Locale.ROOT);
+    @Override
+    public Icon getIcon() {
+      return inverted() ? Icon.ARROW_RIGHT : Icon.ARROW_LEFT;
     }
 
-    public boolean isAll() {
-      return this == ALL;
-    }
-
-    Icon getIcon(boolean extraction) {
-      return switch (this) {
-        case ONE -> extraction ? Icon.XP_EXTRACT_1 : Icon.XP_INSERT_1;
-        case TEN -> extraction ? Icon.XP_EXTRACT_10 : Icon.XP_INSERT_10;
-        case HUNDRED -> extraction ? Icon.XP_EXTRACT_100 : Icon.XP_INSERT_100;
-        case ALL -> extraction ? Icon.XP_EXTRACT_ALL : Icon.XP_INSERT_ALL;
-      };
-    }
-
-    public int getAmount(boolean extraction) {
-      return extraction ? amount : -amount;
-    }
-
-    public Component message(boolean extraction) {
-      return (extraction ? AExpText.EXPERIENCE_BUTTON_EXTRACT : AExpText.EXPERIENCE_BUTTON_INSERT).formatted(getFormatted(), "level(s)");
+    @Override
+    public Component getMessage() {
+      return (inverted() ? AExpText.EXPERIENCE_INVERT_BUTTON_TRUE : AExpText.EXPERIENCE_INVERT_BUTTON_FALSE).text();
     }
   }
 }

@@ -1,6 +1,5 @@
 package es.degrassi.appexp.definition;
 
-import appeng.api.parts.PartModels;
 import appeng.api.upgrades.Upgrades;
 import appeng.block.AEBaseBlock;
 import appeng.block.AEBaseBlockItem;
@@ -10,15 +9,19 @@ import appeng.core.definitions.ItemDefinition;
 import appeng.core.localization.GuiText;
 import appeng.items.AEBaseItem;
 import appeng.items.materials.MaterialItem;
-import appeng.items.parts.PartItem;
-import appeng.items.parts.PartModelsHelper;
 import appeng.items.storage.StorageTier;
+import de.mari_023.ae2wtlib.api.gui.Icon;
+import de.mari_023.ae2wtlib.api.registration.AddTerminalEvent;
 import es.degrassi.appexp.AppliedExperienced;
+import es.degrassi.appexp.api.item.ICreativeTabItem;
 import es.degrassi.appexp.item.ExperiencePortableCellItem;
 import es.degrassi.appexp.item.ExperienceStorageCell;
-import es.degrassi.appexp.part.ExperienceAcceptorPart;
-import net.minecraft.Util;
+import es.degrassi.appexp.weat.ItemWeat;
+import es.degrassi.appexp.weat.WeatMenu;
+import es.degrassi.appexp.weat.WeatMenuHost;
+import lombok.experimental.UtilityClass;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,18 +29,16 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.RegisterEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+@UtilityClass
 public final class AExpItems {
-  private AExpItems() {
-  }
-
-  private static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB,
-      AppliedExperienced.MODID);
+  private static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, AppliedExperienced.MODID);
   private static final List<ItemDefinition<?>> ITEMS = new ArrayList<>();
   public static final DeferredRegister.Items DR = DeferredRegister.createItems(AppliedExperienced.MODID);
 
@@ -48,6 +49,19 @@ public final class AExpItems {
   public static void initialize(IEventBus bus) {
     TABS.register(bus);
     DR.register(bus);
+    bus.addListener(RegisterEvent.class, event -> {
+      if (event.getRegistryKey().equals(Registries.ITEM)) {
+        AddTerminalEvent.register(ev -> {
+          ev.builder(
+              "experience_access",
+              WeatMenuHost::new,
+              WeatMenu.TYPE,
+              AExpItems.EXPERIENCE_TERMINAL.asItem(),
+              new Icon(0, 0, 16, 16, new Icon.Texture(AppliedExperienced.id("textures/guis/wireless_icon.png"), 16, 16))
+          ).addTerminal();
+        });
+      }
+    });
   }
 
   private static Item basic(Item.Properties p) {
@@ -57,7 +71,7 @@ public final class AExpItems {
   public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CREATIVE_TAB = TABS.register("main",
       () -> CreativeModeTab
       .builder()
-      .title(AExpText.CREATIVE_TAB.formatted())
+      .title(AExpText.CREATIVE_TAB.text())
       .icon(() -> new ItemStack(AExpItems.EXPERIENCE_CELL_256K.get()))
       .displayItems(AExpItems::display)
       .build()
@@ -71,12 +85,11 @@ public final class AExpItems {
     for (var def : defs) {
       var item = def.asItem();
 
-      if (item instanceof AEBaseBlockItem baseItem && baseItem.getBlock() instanceof AEBaseBlock baseBlock) {
-        baseBlock.addToMainCreativeTab(params, output);
-      } else if (item instanceof AEBaseItem baseItem) {
-        baseItem.addToMainCreativeTab(params, output);
-      } else {
-        output.accept(def);
+      switch (item) {
+        case AEBaseBlockItem baseItem when baseItem.getBlock() instanceof AEBaseBlock baseBlock -> baseBlock.addToMainCreativeTab(params, output);
+        case AEBaseItem baseItem -> baseItem.addToMainCreativeTab(params, output);
+        case ICreativeTabItem tabItem -> tabItem.addToMainCreativeTab(params, output);
+        default -> output.accept(def);
       }
     }
   }
@@ -85,6 +98,12 @@ public final class AExpItems {
       "ME Experience Cell Housing",
       "experience_cell_housing",
       AExpItems::basic
+  );
+
+  public static final ItemDefinition<ItemWeat> EXPERIENCE_TERMINAL = item(
+      "Wireless Experience Access Terminal",
+      "wireless_experience_access_terminal",
+      p -> new ItemWeat()
   );
 
   public static final ItemDefinition<ExperienceStorageCell> EXPERIENCE_CELL_1K = cell(StorageTier.SIZE_1K);
@@ -104,24 +123,7 @@ public final class AExpItems {
   public static final ItemDefinition<ExperiencePortableCellItem> PORTABLE_EXPERIENCE_CELL_256K =
       portable(StorageTier.SIZE_256K, 0x80caff);
 
-//  public static final ItemDefinition<PartItem<ExperienceP2PTunnelPart>> EXPERIENCE_P2P_TUNNEL = Util.make(() -> {
-//    PartModels.registerModels(PartModelsHelper.createModels(ExperienceP2PTunnelPart.class));
-//    return item(
-//        "ME Experience P2P Tunnel",
-//        "experience_p2p_tunnel",
-//        (p) -> new PartItem<>(p, ExperienceP2PTunnelPart.class, ExperienceP2PTunnelPart::new)
-//    );
-//  });
-
-  public static final ItemDefinition<PartItem<ExperienceAcceptorPart>> EXPERIENCE_ACCEPTOR_PART = Util.make(() -> {
-    PartModels.registerModels(PartModelsHelper.createModels(ExperienceAcceptorPart.class));
-    return item(
-        "ME Experience Converter",
-        "cable_experience_acceptor",
-        p -> new PartItem<>(p, ExperienceAcceptorPart.class, ExperienceAcceptorPart::new));
-  });
-
-  private static ItemDefinition<ExperienceStorageCell> cell(StorageTier tier) {
+  static ItemDefinition<ExperienceStorageCell> cell(StorageTier tier) {
     return item(
         tier.namePrefix() + " ME Experience Storage Cell",
         "experience_storage_cell_" + tier.namePrefix(),
@@ -129,7 +131,7 @@ public final class AExpItems {
     );
   }
 
-  private static ItemDefinition<ExperiencePortableCellItem> portable(StorageTier tier, int defaultColor) {
+  static ItemDefinition<ExperiencePortableCellItem> portable(StorageTier tier, int defaultColor) {
     return item(
         tier.namePrefix() + " Portable Experience Cell",
         "portable_experience_cell_" + tier.namePrefix(),
@@ -137,7 +139,7 @@ public final class AExpItems {
     );
   }
 
-  private static <T extends Item> ItemDefinition<T> item(
+  static <T extends Item> ItemDefinition<T> item(
       String englishName,
       String id,
       Function<Item.Properties, T> factory
@@ -145,6 +147,14 @@ public final class AExpItems {
     var definition = new ItemDefinition<>(englishName, DR.registerItem(id, factory));
     ITEMS.add(definition);
     return definition;
+  }
+
+  static <T extends Item> ItemDefinition<T> item(
+      String englishName,
+      ResourceLocation id,
+      Function<Item.Properties, T> factory
+  ) {
+    return item(englishName, id.getPath(), factory);
   }
 
   public static List<ItemDefinition<ExperienceStorageCell>> getCells() {

@@ -20,6 +20,7 @@ public class AExpConfig {
   public final ConfigValue<Long> XP_CONVERTER_CAPACITY;
   public final ConfigValue<Integer> XP_CONVERSION_RATE;
   public final ConfigValue<Integer> XP_BOTTLE_XP_AMOUNT;
+  public final ConfigValue<Integer> XP_CONVERTER_TICK_AMOUNT;
 
   public AExpConfig(Builder builder) {
     builder.push("Experience Converter");
@@ -31,6 +32,9 @@ public class AExpConfig {
         .defineInRange("rate", 250, 1, Integer.MAX_VALUE, Integer.class);
     this.XP_BOTTLE_XP_AMOUNT = builder
         .comment("Defined the amount of xp given per Bottle o'Enchanting")
+        .defineInRange("amount", 1, 1, Integer.MAX_VALUE);
+    this.XP_CONVERTER_TICK_AMOUNT = builder
+        .comment("Defines the amount of items to extract each tick at max")
         .defineInRange("amount", 1, 1, Integer.MAX_VALUE);
     builder.pop();
   }

@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
@@ -23,7 +22,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HalfTransparentBlock;
 import net.minecraft.world.level.block.StainedGlassPaneBlock;
 import net.neoforged.neoforge.client.ClientHooks;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -40,15 +38,8 @@ public class ExperienceConverterItemRenderer extends BlockEntityWithoutLevelRend
   public static final ExperienceConverterItemRenderer RENDERER = new ExperienceConverterItemRenderer();
 
   @Override
-  public void onResourceManagerReload(@NotNull ResourceManager resourceManager) {
-    //Note: We don't need to register this as a reload listener as we don't have an in code model or make use of this
-    // reload in any way
-  }
-
-  @Override
   public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource buffer, int light, int overlay) {
-    var m = Minecraft.getInstance().getBlockRenderer()
-        .getBlockModel(AExpBlocks.EXPERIENCE_CONVERTER.block().defaultBlockState());
+    var m = Minecraft.getInstance().getBlockRenderer().getBlockModel(AExpBlocks.EXPERIENCE_CONVERTER.block().defaultBlockState());
 
     poseStack.pushPose();
     poseStack.translate(0.5, 0.5, 0.5);
@@ -84,8 +75,7 @@ public class ExperienceConverterItemRenderer extends BlockEntityWithoutLevelRend
       }
     }
 
-    float percent = (float) stack.getOrDefault(AExpComponents.EXPERIENCE_AMOUNT, 0L)
-        / AExpConfig.get().XP_CONVERTER_CAPACITY.get();
+    float percent = (float) stack.getOrDefault(AExpComponents.EXPERIENCE_AMOUNT, 0L) / AExpConfig.get().XP_CONVERTER_CAPACITY.get();
 
     if (percent <= 0f) {
       poseStack.popPose();
@@ -101,7 +91,7 @@ public class ExperienceConverterItemRenderer extends BlockEntityWithoutLevelRend
     var fill = Mth.lerp(Mth.clamp(percent, 0f, 1f), 2 / 16F, 12 / 16F);
 
     var builder = new CubeBuilder();
-    float y2 = Math.min(fill * 16, Math.max(fill * 16 - 1/2048f, 0));
+    float y2 = Math.clamp(fill * 16 - 1 / 2048f, 0, fill * 16);
 
     builder.setTexture(EXPERIENCE.sprite());
     builder.addCube(1 + 1/2048f,  1/2048f, 1 + 1/2048f, 15 - 1/2048f, y2, 15 - 1/2048f);

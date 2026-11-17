@@ -1,7 +1,7 @@
 package es.degrassi.appexp.client.widgets;
 
 import appeng.client.gui.style.Blitter;
-import appeng.core.AppEng;
+import es.degrassi.appexp.AppliedExperienced;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.common.asm.enumextension.ExtensionInfo;
 import net.neoforged.fml.common.asm.enumextension.IExtensibleEnum;
@@ -209,7 +209,7 @@ public enum Icon implements IExtensibleEnum {
   public final int width;
   public final int height;
 
-  public static final ResourceLocation TEXTURE = AppEng.makeId("textures/guis/states.png");
+  public static final ResourceLocation TEXTURE = AppliedExperienced.id("textures/guis/states.png");
   public static final int TEXTURE_WIDTH = 256;
   public static final int TEXTURE_HEIGHT = 256;
 

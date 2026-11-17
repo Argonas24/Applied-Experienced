@@ -16,7 +16,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -27,8 +26,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.BooleanOp;
@@ -42,7 +39,6 @@ import javax.annotation.ParametersAreNonnullByDefault;
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 public class ExperienceConverterBlock extends Block implements EntityBlock {
-  public static final IntegerProperty light = IntegerProperty.create("light", 0, 15);
   private static final StateArgumentPredicate<EntityType<?>> spawnPredicate =
       (state, level, pos, type) ->
           state.isFaceSturdy(level, pos, Direction.UP) &&
@@ -57,20 +53,21 @@ public class ExperienceConverterBlock extends Block implements EntityBlock {
         .noOcclusion()
         .requiresCorrectToolForDrops()
         .strength(5.0f, 6.0f)
-        .lightLevel(state -> state.getValue(light))
         .isValidSpawn(spawnPredicate)
     );
   }
 
   @Override
-  public BlockState getStateForPlacement(BlockPlaceContext context) {
-    return super.getStateForPlacement(context).setValue(light, 0);
+  public boolean hasDynamicLightEmission(BlockState state) {
+    return true;
   }
 
   @Override
-  protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-    super.createBlockStateDefinition(builder);
-    builder.add(light);
+  public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
+    if (level.getBlockEntity(pos) instanceof ExperienceConverterEntity entity) {
+      return entity.getLightEmission();
+    }
+    return super.getLightEmission(state, level, pos);
   }
 
   @Override
