@@ -30,5 +30,6 @@
   "text.appex.gui.title.xpAccessTerminalShort": "Терминал опыта",
   "text.appex.item.converter.inv": "Сохранено: %s",
   "text.appex.item.converter.tooltip": "Сохранено: %s опыта",
-  "text.appex.p2p_attunement.experrience": "Переносные хранилища опыта (например, пузырёк опыта, бутылочка, резервуары опыта)"
+  "text.appex.p2p_attunement.experrience": "Переносные хранилища опыта (например, пузырёк опыта, бутылочка, резервуары опыта)",
+  "text.appex.item.converter.empty": "Пусто"
 }
